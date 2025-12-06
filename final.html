@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rute Wisata Kabupaten Mojokerto</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <style>
+        #map { height: 100vh; width: 100%; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px; margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 40px; text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em; margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .content { padding: 40px; }
+
+        .route-info {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white; padding: 25px; border-radius: 15px;
+            margin-bottom: 30px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .route-info .info-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-top: 20px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px; border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .destinations { margin-top: 30px; }
+
+        .destination-card {
+            background: white; border-radius: 15px;
+            padding: 25px; margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: .3s; position: relative;
+        }
+
+        .destination-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .destination-number {
+            position: absolute; top: -15px; left: 20px;
+            background: linear-gradient(135deg,#667eea,#764ba2);
+            color: white; width: 40px; height: 40px;
+            border-radius: 50%; display: flex;
+            align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2em; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .destination-card h3 {
+            color: #667eea; font-size: 1.5em;
+            margin-bottom: 15px; margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .destination-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .destination-image {
+            width: 100%; height: 250px;
+            object-fit: cover; border-radius: 10px;
+            margin-bottom: 15px; cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .distance-info {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .route-line {
+            text-align: center; margin: 10px 0;
+            color: #667eea; font-size: 2em;
+        }
+
+        /* POPUP GALLERY */
+        .popup-gallery {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); justify-content: center;
+            align-items: center; z-index: 9999;
+        }
+
+        .popup-content-gallery {
+            background: white; padding: 20px;
+            max-width: 800px; width: 90%;
+            border-radius: 15px;
+            animation: fadeIn .25s ease;
+            position: relative;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            width: 40px; /* Lebar pasti */
+            height: 40px; /* Tinggi pasti */
+            line-height: 40px; /* Agar X di tengah vertikal */
+            text-align: center; /* Agar X di tengah horizontal */
+            font-size: 32px;
+            font-weight: bold;
+            z-index: 999999;
+            cursor: pointer;
+            color: #333;
+            background: rgba(255, 255, 255, 0.8); /* Opsional: latar belakang putih transparan */
+            border-radius: 50%; /* Opsional: membuat tombol bulat */
+            user-select: none; /* Agar tidak ter-blok saat diklik cepat */
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+            gap: 15px;
+        }
+
+        .gallery-grid img {
+            width: 100%; border-radius: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { transform: scale(.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-map-marked-alt"></i> Rute Wisata Kabupaten Mojokerto</h1>
+        <p>Jelajahi 9 destinasi wisata pilihan dalam satu perjalanan</p>
+    </div>
+
+    <div class="content">
+        <!-- Informasi Rute -->
+        <div class="route-info">
+            <h2><i class="fas fa-info-circle"></i> Informasi Rute</h2>
+            <div class="info-grid">
+                <div class="info-item"><i class="fas fa-map-pin"></i><strong>Titik Awal:</strong> Terminal Kertajaya</div>
+                <div class="info-item"><i class="fas fa-route"></i><strong>Total Destinasi:</strong> 9 Tempat Wisata</div>
+                <div class="info-item"><i class="fas fa-clock"></i><strong>Estimasi:</strong> 1-2 Jam</div>
+                <div class="info-item"><i class="fas fa-money-bill-wave"></i><strong>Tarif:</strong> Rp 6.000</div>
+            </div>
+        </div>
+
+        <div class="destinations">
+            <h2 style="color:#667eea;text-align:center;margin-bottom:30px;font-size:2em;">
+                <i class="fas fa-location-arrow"></i> Urutan Destinasi Wisata
+            </h2>
+
+            <!-- ====== DESTINASI 0 s/d 9 (sama persis file Anda) ====== -->
+            <!-- (Saya tidak tulis ulang komentar, isinya sama seperti file Anda yang diupload, hanya dilengkapi) -->
+
+            <!-- ==== DESTINASI 0 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">0</div>
+                <h3><i class="fas fa-flag-checkered destination-icon"></i>Terminal Kertajaya</h3>
+                <img src="./terminal_kertajaya.jpg" class="destination-image">
+                <p><strong>Deskripsi:</strong> Titik keberangkatan perjalanan wisata Anda di Kabupaten Mojokerto.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Mojokerto</p>
+                <p><i class="fas fa-clock"></i> <strong>Keberangkatan:</strong> Pukul 08.00 WIB</p>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 1 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">1</div>
+                <h3><i class="fas fa-landmark destination-icon"></i>Museum Trowulan</h3>
+                <img src="./museum trowulan.jpg" class="destination-image">
+                <p><strong>Deskripsi:</strong> Museum arkeologi yang menyimpan koleksi peninggalan Kerajaan Majapahit. Anda bisa melihat berbagai artefak bersejarah, arca, dan prasasti dari masa kejayaan Majapahit.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Trowulan, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 5.000 - Rp 10.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Terminal</strong>
+                        <span>12 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>25-30 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 2 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">2</div>
+                <h3><i class="fas fa-mosque destination-icon"></i>Makam Troloyo</h3>
+                <img src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Kompleks pemakaman Islam kuno masa Majapahit. Situs bersejarah yang menunjukkan akulturasi budaya Hindu-Islam di era Majapahit.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Trowulan, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Gratis / Donasi</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Museum</strong>
+                        <span>2,1 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>3-5 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 3 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">3</div>
+                <h3><i class="fas fa-gopuram destination-icon"></i>Candi Bajang Ratu</h3>
+                <img src="https://images.unsplash.com/photo-1548013146-72479768bada?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Gapura megah peninggalan Majapahit yang dibangun pada tahun 1347 M. Candi ini memiliki arsitektur unik berbentuk gapura dengan relief yang indah.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Trowulan, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 5.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Makam</strong>
+                        <span>3,3 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>5-10 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 4 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">4</div>
+                <h3><i class="fas fa-gopuram destination-icon"></i>Candi Tikus</h3>
+                <img src="https://images.unsplash.com/photo-1609137144813-7d9921338f24?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Situs pemandian kerajaan Majapahit yang terletak di bawah permukaan tanah. Struktur candinya unik dengan kolam dan sistem air yang masih berfungsi.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Trowulan, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 5.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Bajang Ratu</strong>
+                        <span>0,75 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>1-5 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 5 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">5</div>
+                <h3><i class="fas fa-swimming-pool destination-icon"></i>Parimas Waterpark</h3>
+                <img src="https://images.unsplash.com/photo-1561459412-a9097e576f8e?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Taman rekreasi air dengan berbagai wahana permainan air yang cocok untuk keluarga. Tersedia kolam renang, waterslide, dan area bermain anak.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Sooko, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 30.000 - Rp 50.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Candi Tikus</strong>
+                        <span>17,1 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>25-30 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 6 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">6</div>
+                <h3><i class="fas fa-mountain destination-icon"></i>Bernah Da Valley</h3>
+                <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Destinasi wisata alam dengan pemandangan pegunungan yang indah. Cocok untuk berfoto, camping, dan menikmati udara sejuk pegunungan.</p>
+                    <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Pacet, Mojokerto</p>
+                    <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 10.000 - Rp 20.000</p>
+                    <div class="distance-info">
+                        <div class="distance-item">
+                            <i class="fas fa-route"></i>
+                            <strong>Jarak dari Parimas</strong>
+                            <span>7,7 km</span>
+                        </div>
+                        <div class="distance-item">
+                            <i class="fas fa-clock"></i>
+                            <strong>Waktu Tempuh</strong>
+                            <span>11-15 menit</span>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 7 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">7</div>
+                <h3><i class="fas fa-water destination-icon"></i>Ubalan Waterpark</h3>
+                <img src="https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Pemandian air panas alami yang terletak di kawasan Pacet. Air hangatnya dipercaya memiliki khasiat untuk kesehatan dan relaksasi.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Pacet, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 15.000 - Rp 25.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Bernah Da Valley</strong>
+                        <span>6,6 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>9-15 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 8 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">8</div>
+                <h3><i class="fas fa-water destination-icon"></i>Air Terjun Coban Canggu</h3>
+                <img src="https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Air terjun yang indah dengan ketinggian sekitar 30 meter. Dikelilingi hutan tropis dan udara yang sejuk, cocok untuk trekking dan fotografi alam.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Pacet, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 5.000 - Rp 10.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Ubalan</strong>
+                        <span>2,4 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>3-5 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-line"><i class="fas fa-arrow-down"></i></div>
+
+            <!-- ==== DESTINASI 9 ==== -->
+            <div class="destination-card">
+                <div class="destination-number">9</div>
+                <h3><i class="fas fa-hot-tub destination-icon"></i>Wana Wisata Padusan Pacet</h3>
+                <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&h=400&fit=crop" class="destination-image">
+                <p><strong>Deskripsi:</strong> Pemandian air panas alami yang terkenal di kawasan Pacet. Tempat yang sempurna untuk berendam dan relaksasi setelah perjalanan panjang menjelajahi Mojokerto.</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Pacet, Mojokerto</p>
+                <p><i class="fas fa-ticket-alt"></i> <strong>Tiket:</strong> Rp 20.000 - Rp 40.000</p>
+                <div class="distance-info">
+                    <div class="distance-item">
+                        <i class="fas fa-route"></i>
+                        <strong>Jarak dari Air Terjun</strong>
+                        <span>1,2 km</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Waktu Tempuh</strong>
+                        <span>1-5 menit</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== GARIS FINISH ===== -->
+            <div class="route-line" style="margin:30px 0 30px 0;">
+                <i class="fas fa-flag-checkered" style="color:red;"></i>
+            </div>
+
+            <!-- Total Perjalanan -->
+            <div class="destination-card" style="border-left: 5px solid #d63031; background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);">
+                <h3 style="color: #d63031;"><i class="fas fa-route destination-icon" style="color: #d63031;"></i>Total Perjalanan</h3>
+                <div class="distance-info" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white;">
+                    <div class="distance-item" style="flex: 1;">
+                        <i class="fas fa-map-marked-alt" style="color: white; font-size: 2em;"></i>
+                        <strong style="color: white; font-size: 1em; margin-top: 10px;">Total Jarak Keseluruhan</strong>
+                        <span style="color: white; font-size: 1.5em; font-weight: bold;">53,15 km</span>
+                    </div>
+                    <div class="distance-item" style="flex: 1;">
+                        <i class="fas fa-hourglass-half" style="color: white; font-size: 2em;"></i>
+                        <strong style="color: white; font-size: 1em; margin-top: 10px;">Total Waktu Tempuh</strong>
+                        <span style="color: white; font-size: 1.5em; font-weight: bold;">± 1,5 - 2 Jam</span>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; text-align: center; font-weight: bold; color: #2d3436;">
+                    <i class="fas fa-info-circle"></i> Rute: Terminal Kertajaya → Museum Trowulan → Makam Troloyo → Candi Bajang Ratu → Candi Tikus → Parimas Waterpark → Bernah Da Valley → Ubalan Waterpark → Air Terjun Coban Canggu → Wana Wisata Padusan Pacet
+                </p>
+            </div>
+
+            <!-- PETA RUTE (SVG DIPULIHKAN LENGKAP) -->
+            <div style="margin-top:40px;background:white;padding:30px;border-radius:15px;">
+                <h2 style="color:#667eea;text-align:center;margin-bottom:20px;font-size:2em;">
+                    <i class="fas fa-map"></i> Peta Rute Perjalanan
+                </h2>
+                
+                <div style="width:100%;height:600px;border-radius:10px;overflow:hidden;">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- POPUP GALLERY -->
+<div id="popupGallery" class="popup-gallery">
+    <div class="popup-content-gallery">
+        <span id="popupClose" class="popup-close">&times;</span>
+        <h3 style="margin-bottom:15px;color:#667eea;">Foto Tambahan</h3>
+        <div id="galleryContainer" class="gallery-grid"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script>
+// Inisialisasi Map
+var map = L.map('map').setView([-7.5753, 112.3950], 11);
+
+
+// OpenStreetMap Tile Layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+maxZoom: 19,
+attribution: '© OpenStreetMap'
+}).addTo(map);
+
+
+// Daftar tempat wisata (koordinat contoh)
+var places = [
+    { name: "Terminal Kertajaya", coords: [-7.490883178883896, 112.44901707900898] },
+    { name: "Museum Trowulan", coords: [-7.559917243408095, 112.38060919435456] },
+    { name: "Makam Troloyo", coords: [-7.574029935640465, 112.38060883692354] },
+    { name: "Candi Bajangratu", coords: [-7.567034646783506, 112.39862473239911] },
+    { name: "Candi Tikus", coords: [-7.571076081162736, 112.4035170816811] },
+    { name: "Parimas Waterpark", coords: [-7.614182892401057, 112.53195169435517] },
+    { name: "Bernah De Valey", coords: [-7.6524953596902785, 112.55884566551958] },
+    { name: "Ubalan Waterpark", coords: [-7.671464233021259, 112.5389214655198] },
+    { name: "Coban Canggu", coords: [-7.681688336591717, 112.54659166551994] },
+    { name: "Padusan Pacet", coords: [-7.6834519746882215, 112.54932362133482] }
+];
+
+
+// Tambahkan marker dengan angka urutan rute
+places.forEach(function(place, index) {
+L.marker(place.coords, {
+icon: L.divIcon({
+className: 'number-icon',
+html: '<div style="width:32px;height:32px;border-radius:50%;background:#667eea;color:white;display:flex;justify-content:center;align-items:center;font-weight:bold;font-size:16px;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,0.3);">' + index + '</div>'
+})
+}).addTo(map).bindPopup(place.name);
+});
+
+
+// Gambar Polyline (menghubungkan rute wisata)
+// var routeCoords = places.map(function(p) { return p.coords; });
+// L.polyline(routeCoords, { weight: 4 }).addTo(map);
+
+// Routing mengikuti jalur jalan (Leaflet Routing Machine)
+L.Routing.control({
+    waypoints: places.map(function(p) { return L.latLng(p.coords[0], p.coords[1]); }),
+    routeWhileDragging: false,
+    show: false,
+    addWaypoints: false,
+    draggableWaypoints: false,
+    fitSelectedRoutes: true,
+    lineOptions: {
+    styles: [{ weight: 5 }]
+    }
+}).addTo(map);
+
+// JAVASCRIPT GALERI
+// 1. Pastikan DOM sudah siap sebelum script jalan
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const popup = document.getElementById("popupGallery");
+    const galleryContainer = document.getElementById("galleryContainer");
+    const closePopup = document.getElementById("popupClose");
+
+    // Data Galeri
+    const galleryData = {
+        "Terminal Kertajaya": [
+            "./terminal_kertajaya1.jpg",
+            "./terminal_kertajaya2.jpg",
+        ],
+        "Museum Trowulan": [
+            "./museum trowulan1.jpg",
+            "https://source.unsplash.com/400x300/?majapahit"
+        ],
+        "Makam Troloyo": [
+            "https://source.unsplash.com/400x300/?graveyard",
+            "https://source.unsplash.com/400x300/?history"
+        ],
+        "Candi Bajang Ratu": [
+            "https://source.unsplash.com/400x300/?temple",
+            "https://source.unsplash.com/400x300/?majapahit"
+        ],
+        "Candi Tikus": [
+            "https://source.unsplash.com/400x300/?pool",
+            "https://source.unsplash.com/400x300/?temple"
+        ],
+        "Parimas Waterpark": [
+            "https://source.unsplash.com/400x300/?waterpark",
+            "https://source.unsplash.com/400x300/?pool"
+        ],
+        "Bernah Da Valley": [
+            "https://source.unsplash.com/400x300/?mountain",
+            "https://source.unsplash.com/400x300/?forest"
+        ],
+        "Ubalan Waterpark": [
+            "https://source.unsplash.com/400x300/?hotspring",
+            "https://source.unsplash.com/400x300/?water"
+        ],
+        "Air Terjun Coban Canggu": [
+            "https://source.unsplash.com/400x300/?waterfall",
+            "https://source.unsplash.com/400x300/?jungle"
+        ],
+        "Wana Wisata Padusan Pacet": [
+            "https://source.unsplash.com/400x300/?hotspring",
+            "https://source.unsplash.com/400x300/?nature"
+        ]
+    };
+
+    // 2. Fungsi Buka Galeri
+    document.querySelectorAll(".destination-card").forEach(card => {
+        // Ambil elemen H3 dan Gambar
+        const titleEl = card.querySelector("h3");
+        const imgEl = card.querySelector("img");
+
+        function openGallery() {
+            // Ambil teks judul, bersihkan dari spasi berlebih
+            const title = titleEl.innerText.trim(); 
+            
+            galleryContainer.innerHTML = "";
+            
+            // Cek apakah data ada, jika tidak pakai array kosong untuk mencegah error
+            const images = galleryData[title] || [];
+            
+            if(images.length === 0) {
+                console.log("Tidak ada foto untuk: " + title);
+            }
+
+            images.forEach(src => {
+                const i = document.createElement("img");
+                i.src = src;
+                galleryContainer.appendChild(i);
+            });
+
+            popup.style.display = "flex";
+        }
+
+        // Pasang event click jika elemen ada
+        if(titleEl) titleEl.onclick = openGallery;
+        if(imgEl) imgEl.onclick = openGallery;
+    });
+
+    // 3. Fungsi Tutup Galeri (DIPERBAIKI)
+    if (closePopup) {
+        closePopup.onclick = function() {
+            popup.style.display = "none";
+        };
+    } else {
+        console.error("Tombol Close tidak ditemukan di HTML!");
+    }
+
+    // Tutup jika klik di area hitam (luar foto)
+    window.onclick = function(e) {
+        if (e.target === popup) {
+            popup.style.display = "none";
+        }
+    };
+});
+</script>
+
+</body>
+</html>
