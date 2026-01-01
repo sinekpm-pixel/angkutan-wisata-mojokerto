@@ -229,6 +229,7 @@
                 <img src="./terminal_kertajaya.jpg" class="destination-image">
                 <p><strong>Deskripsi:</strong> Titik keberangkatan perjalanan wisata Anda di Kabupaten Mojokerto.</p>
                 <p><i class="fas fa-map-marker-alt"></i> <strong>Lokasi:</strong> Mojokerto</p>
+                <p id="stop-distance-0" style="display:none;"></p>
                 <p><i class="fas fa-clock"></i> <strong>Keberangkatan:</strong> Pukul 08.00 WIB</p>
             </div>
 
@@ -608,16 +609,29 @@ function createOrUpdateGpsMarker(index, latlng) {
     const lat = (latlng.lat !== undefined) ? latlng.lat : latlng[0];
     const lng = (latlng.lng !== undefined) ? latlng.lng : latlng[1];
 
+    // Hitung jarak dari titik pemberhentian ke destinasi (dalam meter)
+    const stopLatLng = L.latLng(lat, lng);
+    const destLatLng = L.latLng(places[index].coords[0], places[index].coords[1]);
+    const distance = stopLatLng.distanceTo(destLatLng).toFixed(0); // meter
+
     if (gpsMarkers[index]) {
         gpsMarkers[index].setLatLng([lat, lng]);
+        gpsMarkers[index].setTooltipContent(`Pemberhentian: ${index} - ${places[index].name} (Jarak ke destinasi: ${distance} m)`);
     } else {
         gpsMarkers[index] = L.marker([lat, lng], { icon: angkutanIcon }).addTo(map)
-            .bindTooltip(`Pemberhentian: ${index} - ${places[index].name}`, {direction: 'top', offset: [0, -6]});
+            .bindTooltip(`Pemberhentian: ${index} - ${places[index].name} (Jarak ke destinasi: ${distance} m)`, {direction: 'top', offset: [0, -6]});
     }
 
     // Update data tempat dan simpan ke currentStops (untuk sesi ini)
     places[index].stopCoords = [lat, lng];
     currentStops[index] = [lat, lng];
+
+    // Update info jarak di card destinasi
+    const distanceEl = document.querySelector(`#stop-distance-${index} span`);
+    if (distanceEl) {
+        distanceEl.textContent = distance;
+        document.getElementById(`stop-distance-${index}`).style.display = 'block';
+    }
 
     // Jika kontrol terbuka dan destinasi yang sama dipilih, perbarui nilai input
     const sel = document.getElementById('placeSelect');
@@ -905,6 +919,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         delete places[idx].stopCoords;
         delete currentStops[idx];
+        document.getElementById(`stop-distance-${idx}`).style.display = 'none';
         stopLat.value = '';
         stopLng.value = '';
     });
@@ -923,6 +938,18 @@ document.addEventListener('DOMContentLoaded', function() {
         placeSelect.selectedIndex = 0;
         placeSelect.dispatchEvent(new Event('change'));
     }
+
+    // Update card info untuk destinasi yang sudah punya stopCoords
+    places.forEach((p, idx) => {
+        if (p.stopCoords) {
+            const distance = L.latLng(p.stopCoords[0], p.stopCoords[1]).distanceTo(L.latLng(p.coords[0], p.coords[1])).toFixed(0);
+            const distanceEl = document.querySelector(`#stop-distance-${idx} span`);
+            if (distanceEl) {
+                distanceEl.textContent = distance;
+                document.getElementById(`stop-distance-${idx}`).style.display = 'block';
+            }
+        }
+    });
 });
 
 // Marker angkutan umum
