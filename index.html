@@ -253,6 +253,11 @@
                         <strong>Waktu Tempuh</strong>
                         <span>25-30 menit</span>
                     </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-0">Belum ditentukan</span>
+                    </div>
                 </div>
             </div>
 
@@ -276,6 +281,11 @@
                         <i class="fas fa-clock"></i>
                         <strong>Waktu Tempuh</strong>
                         <span>3-5 menit</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-1">Belum ditentukan</span>
                     </div>
                 </div>
             </div>
@@ -301,6 +311,11 @@
                         <strong>Waktu Tempuh</strong>
                         <span>5-10 menit</span>
                     </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-2">Belum ditentukan</span>
+                    </div>
                 </div>
             </div>
 
@@ -324,6 +339,11 @@
                         <i class="fas fa-clock"></i>
                         <strong>Waktu Tempuh</strong>
                         <span>1-5 menit</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-3">Belum ditentukan</span>
                     </div>
                 </div>
             </div>
@@ -349,6 +369,11 @@
                         <strong>Waktu Tempuh</strong>
                         <span>25-30 menit</span>
                     </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-4">Belum ditentukan</span>
+                    </div>
                 </div>
             </div>
 
@@ -372,6 +397,11 @@
                             <i class="fas fa-clock"></i>
                             <strong>Waktu Tempuh</strong>
                             <span>11-15 menit</span>
+                        </div>
+                        <div class="distance-item">
+                            <i class="fas fa-walking"></i>
+                            <strong>Jarak Berjalan dari Pemberhentian</strong>
+                            <span id="walking-distance-5">Belum ditentukan</span>
                         </div>
                     </div>
             </div>
@@ -397,6 +427,11 @@
                         <strong>Waktu Tempuh</strong>
                         <span>9-15 menit</span>
                     </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-6">Belum ditentukan</span>
+                    </div>
                 </div>
             </div>
 
@@ -421,6 +456,11 @@
                         <strong>Waktu Tempuh</strong>
                         <span>3-5 menit</span>
                     </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-7">Belum ditentukan</span>
+                    </div>
                 </div>
             </div>
 
@@ -444,6 +484,11 @@
                         <i class="fas fa-clock"></i>
                         <strong>Waktu Tempuh</strong>
                         <span>1-5 menit</span>
+                    </div>
+                    <div class="distance-item">
+                        <i class="fas fa-walking"></i>
+                        <strong>Jarak Berjalan dari Pemberhentian</strong>
+                        <span id="walking-distance-8">Belum ditentukan</span>
                     </div>
                 </div>
             </div>
@@ -533,6 +578,36 @@ const angkutanIcon = L.icon({
     popupAnchor: [0, -40]
 });
 
+// Fungsi menghitung jarak menggunakan rumus Haversine
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371; // Radius bumi dalam km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+// Fungsi update jarak berjalan
+function updateWalkingDistances() {
+    places.forEach((place, index) => {
+        const span = document.getElementById(`walking-distance-${index}`);
+        if (span) {
+            if (place.stopCoords) {
+                const dist = calculateDistance(
+                    place.stopCoords[0], place.stopCoords[1],
+                    place.coords[0], place.coords[1]
+                );
+                span.textContent = dist.toFixed(2) + ' km';
+            } else {
+                span.textContent = 'Belum ditentukan';
+            }
+        }
+    });
+}
+
 // --- Load saved stops dari localStorage (jika ada)
 let savedStops = {};
 try {
@@ -570,6 +645,9 @@ function createOrUpdateGpsMarker(index, latlng) {
         document.getElementById('stopLat').value = lat;
         document.getElementById('stopLng').value = lng;
     }
+
+    // Update jarak berjalan
+    updateWalkingDistances();
 }
 
 // Tambahkan marker + nomor + nama tempat (label permanen)
@@ -615,6 +693,9 @@ places.forEach(function(place, index) {
     const gpsPos = place.stopCoords ? place.stopCoords : [place.coords[0] + 0.00018, place.coords[1]];
     createOrUpdateGpsMarker(index, L.latLng(gpsPos[0], gpsPos[1]));
 });
+
+// Update jarak berjalan awal
+updateWalkingDistances();
 
 
 
